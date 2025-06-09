@@ -1,8 +1,12 @@
 # Para Inciarl Streamlit usa python -m streamlit run visual/dashboard.py
 
+#HAY UNOS WARNINGS DE MATPLOTLIB ES QUE CUANODO SE GENERAN LOS NODOS SE CREAN CON UNOS EMOJIS QUE NO SON CAPACES DE PROCESAR HAY
+#QUE QUITARLOS ESO Xd
+
 
 import streamlit as st
 from visual.networkx_adapter import NetworkXAdapter
+from sim.init_simulation import generar_red  # importa tu función
 
 
 # Configuración de la interfaz
@@ -61,8 +65,27 @@ with tabs[1]:
 
         if graph:
             adapter = NetworkXAdapter(graph)
-            adapter.draw(st_container=st)
+            adapter.draw(st_target=st)
         else:
             st.warning("⚠️ Aún no se ha generado el grafo.")
     else:
         st.info("Inicia una simulación en la pestaña anterior para visualizar la red.")
+
+
+    if st.button("📊 Start Simulation", key="start_sim_btn"):
+
+        st.success("Simulación iniciada correctamente 🚀")
+
+        st.session_state["simulation_started"] = True
+        st.session_state["params"] = {
+            "n_nodes": n_nodes,
+            "m_edges": m_edges,
+            "n_orders": n_orders,
+            "n_almacen": n_almacen,
+            "n_recarga": n_recarga,
+            "n_clientes": n_clientes
+        }
+
+        # Crear red de drones y guardarla
+        graph = generar_red(n_nodes, m_edges, n_almacen, n_recarga, n_clientes)
+        st.session_state["graph"] = graph
