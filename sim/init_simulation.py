@@ -12,7 +12,7 @@ def generar_red(n_nodes, m_edges, n_almacen, n_recarga, n_clientes):
     graph = Graph(directed=True)
 
     # Asignar roles
-    roles = ["📦"] * n_almacen + ["🔋"] * n_recarga + ["👤"] * n_clientes
+    roles = ["ROL"] * n_almacen + ["Bateria"] * n_recarga + ["Cliente"] * n_clientes
     random.shuffle(roles)
 
     vertices = []

@@ -1,5 +1,6 @@
 import networkx as nx
 import matplotlib.pyplot as plt
+import streamlit as st
 
 class AVLVisualizer:
     def __init__(self, avl_tree):
@@ -26,9 +27,10 @@ class AVLVisualizer:
         self.graph.clear()
         self._add_edges(self.tree.root)
 
-        pos = nx.nx_agraph.graphviz_layout(self.graph, prog='dot')  # usa layout tipo árbol
+        pos = nx.spring_layout(self.graph, seed=42)  # layout alternativo sin pygraphviz
         plt.figure(figsize=(12, 6))
         nx.draw(self.graph, pos, with_labels=True, node_size=2500, node_color="skyblue", font_size=10)
         plt.title("AVL Tree Visualization")
         plt.tight_layout()
         st.pyplot(plt)  # muestra dentro de Streamlit
+
