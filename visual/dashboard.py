@@ -2,6 +2,8 @@
 
 
 import streamlit as st
+from visual.networkx_adapter import NetworkXAdapter
+
 
 # Configuración de la interfaz
 st.set_page_config(page_title="Sistema de Drones", layout="wide")
@@ -41,3 +43,26 @@ with tabs[0]:
             "n_recarga": n_recarga,
             "n_clientes": n_clientes
         }
+
+# =============================
+# 🌍 PESTAÑA 2: Explore Network
+# =============================
+
+with tabs[1]:
+    st.header("🌍 Explora la Red de Drones")
+
+    # Asegúrate de que ya se haya iniciado la simulación
+    if "simulation_started" in st.session_state:
+        st.subheader("🔎 Vista de red generada")
+
+        # Supongamos que ya tienes el grafo construido como `graph`
+        # Si lo tienes guardado en session_state, reemplaza aquí
+        graph = st.session_state.get("graph")  # <-- ajusta este nombre si usas otro
+
+        if graph:
+            adapter = NetworkXAdapter(graph)
+            adapter.draw(st_container=st)
+        else:
+            st.warning("⚠️ Aún no se ha generado el grafo.")
+    else:
+        st.info("Inicia una simulación en la pestaña anterior para visualizar la red.")
