@@ -168,3 +168,83 @@ with tabs[2]:
     else:
         st.info("Inicia una simulación para ver clientes y órdenes.")
 
+ # =============================
+# 📋 PESTAÑA 4: Route Analytics
+# =============================
+
+with tabs[3]:
+    st.header("📋 Route Analytics")
+
+    if st.session_state.get("simulation_started"):
+        sim = st.session_state["sim"]
+        rutas = sim.get_frequent_routes()
+
+        if rutas:
+            rutas.sort()  # Ordenar por recorrido (orden lexicográfico)
+
+            st.subheader("🔁 Rutas más frecuentes")
+            for ruta, freq in rutas:
+                st.markdown(f"- **{ruta}** | Frecuencia: {freq}")
+
+            st.subheader("🌳 Visualización del árbol AVL")
+            from visual.avl_visualizer import AVLVisualizer
+            visualizer = AVLVisualizer(sim.routes_avl)
+            visualizer.draw()
+        else:
+            st.warning("No hay rutas registradas aún.")
+    else:
+        st.info("Inicia una simulación para analizar rutas.")
+
+# ==============================
+# 📈 PESTAÑA 5: General Statistics
+# ==============================
+with tabs[4]:
+    st.header("📈 General Statistics")
+
+import matplotlib.pyplot as plt
+import math
+
+# Asegurar que se guarde el grafo si no existe
+if "graph" not in st.session_state and st.session_state.get("params"):
+    from sim.init_simulation import generar_red
+    params = st.session_state["params"]
+    st.session_state["graph"] = generar_red(
+        params["n_nodes"],
+        params["m_edges"],
+        params["n_almacen"],
+        params["n_recarga"],
+        params["n_clientes"]
+    )
+
+graph = st.session_state.get("graph")
+if graph:
+    roles = {"📦": "Almacenamiento", "🔋": "Recarga", "👤": "Cliente"}
+    role_counts = {"📦": 0, "🔋": 0, "👤": 0}
+
+    for v in graph.vertices():
+        for symbol in roles:
+            if str(v).startswith(symbol):
+                role_counts[symbol] += 1
+
+    labels = [roles[k] for k in role_counts]
+    sizes = [int(role_counts[k]) if role_counts[k] and not math.isnan(role_counts[k]) else 0 for k in role_counts]
+
+    if sum(sizes) > 0:
+        # Gráfico de torta - proporción de roles
+        st.subheader("🥧 Distribución de Nodos por Rol")
+        fig1, ax1 = plt.subplots()
+        ax1.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=90)
+        ax1.axis("equal")
+        st.pyplot(fig1)
+
+        # Gráfico de barras - cantidad por rol
+        st.subheader("📊 Cantidad de Nodos por Rol")
+        fig2, ax2 = plt.subplots()
+        ax2.bar(labels, sizes, color=["#ffd166", "#118ab2", "#ef476f"])
+        ax2.set_ylabel("Cantidad")
+        ax2.set_title("Cantidad de nodos por tipo")
+        st.pyplot(fig2)
+    else:
+        st.warning("No hay nodos registrados para mostrar estadísticas.")
+else:
+    st.warning("No se encontró un grafo generado.")
