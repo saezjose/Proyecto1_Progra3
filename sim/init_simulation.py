@@ -34,4 +34,7 @@ def generar_red(n_nodes, m_edges, n_almacen, n_recarga, n_clientes):
             graph.insert_edge(u, v, random.randint(1, 10))
             added.add((u, v))
 
+    # Guardar los vértices para uso en selectbox (opcional)
+    graph._vertices_list = vertices
+
     return graph

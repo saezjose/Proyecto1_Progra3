@@ -9,7 +9,6 @@ from sim.init_simulation import generar_red
 from sim.simulation import Simulation
 from visual.avl_visualizer import AVLVisualizer
 
-
 # Configuración de la interfaz
 st.set_page_config(page_title="Sistema de Drones", layout="wide")
 
@@ -46,6 +45,7 @@ with tabs[0]:
         st.session_state["graph"] = graph
         st.session_state["sim"] = sim
         st.session_state["simulation_started"] = True
+        st.session_state["adapter"] = NetworkXAdapter(graph)
         st.success("Simulación iniciada correctamente 🚀")
 
 # =============================
@@ -57,102 +57,42 @@ with tabs[1]:
 
     if st.session_state.get("simulation_started"):
         graph = st.session_state["graph"]
-        sim = st.session_state["sim"]
+        adapter = st.session_state["adapter"]
 
-        st.subheader("🔎 Visualización del grafo")
-        adapter = NetworkXAdapter(graph)
-        adapter.draw(st_target=st)
+        st.subheader("🚁 Visualización del grafo")
 
-        st.subheader("✈ Calcular Ruta")
-        vertices = list(graph.vertices())
-        origin = st.selectbox("Nodo Origen", vertices, format_func=str)
-        destination = st.selectbox("Nodo Destino", vertices, format_func=str)
+        st.subheader("🧱 Calcular Ruta")
+        vertices = getattr(graph, "_vertices_list", list(graph.vertices()))
+
+        origin = st.selectbox("Nodo de Origen", vertices, format_func=str)
+        destination = st.selectbox("Nodo de Destino", vertices, format_func=str)
 
         if st.button("✈ Calculate Route"):
             from collections import deque
 
-            def bfs_con_bateria(grafo, origen, destino, bateria_max=50):
+            def bfs_shortest_path(graph, start, goal):
                 visited = set()
-                queue = deque()
-                queue.append((origen, [origen], 0))
+                queue = deque([(start, [start])])
 
                 while queue:
-                    actual, path, cost = queue.popleft()
+                    current, path = queue.popleft()
+                    if current == goal:
+                        return path
+                    for neighbor in graph.neighbors(current):
+                        if neighbor not in visited:
+                            visited.add(neighbor)
+                            queue.append((neighbor, path + [neighbor]))
+                return None
 
-                    if actual == destino and cost <= bateria_max:
-                        return path, cost
-
-                    for vecino in grafo.neighbors(actual):
-                        if vecino not in path:
-                            edge = grafo.get_edge(actual, vecino)
-                            nuevo_costo = cost + edge.element()
-
-                            if nuevo_costo <= bateria_max:
-                                queue.append((vecino, path + [vecino], nuevo_costo))
-
-                return None, None
-
-            path, cost = bfs_con_bateria(graph, origin, destination)
+            path = bfs_shortest_path(graph, origin, destination)
 
             if path:
-                st.success(f"Ruta encontrada: {' → '.join(str(v) for v in path)} | Costo: {cost}")
+                st.success("Ruta encontrada:")
+                st.markdown(" → ".join(str(v) for v in path))
                 adapter.draw(st_target=st, highlight_path=path)
-
-                if st.button("✅ Complete Delivery and Create Order"):
-                    client_id = "client_test"
-                    sim.register_client(client_id, "Cliente Test")
-                    sim.create_order(client_id, origin, destination, 1, path, cost)
-                    st.success("Orden creada y ruta registrada en AVL ✅")
             else:
-                st.error("No hay ruta posible dentro del límite de batería (50).")
+                st.error("No se encontró una ruta entre los nodos seleccionados.")
+        else:
+            adapter.draw(st_target=st)
     else:
         st.info("Inicia una simulación en la pestaña anterior para usar esta sección.")
-
-# ===============================
-# 🌐 PESTAÑA 3: Clients & Orders
-# ===============================
-
-with tabs[2]:
-    st.header("🌐 Clientes y Órdenes")
-
-    if st.session_state.get("simulation_started"):
-        sim = st.session_state["sim"]
-        st.subheader("👤 Clientes")
-        for c in sim.get_clients():
-            st.json(c)
-
-        st.subheader("📦 Órdenes")
-        for o in sim.get_orders():
-            st.json(o)
-    else:
-        st.info("Inicia una simulación para ver clientes y órdenes.")
-
-# =============================
-# 📋 PESTAÑA 4: Route Analytics
-# =============================
-
-with tabs[3]:
-    st.header("📋 Route Frequency & History")
-
-    if st.session_state.get("simulation_started"):
-        sim = st.session_state["sim"]
-        rutas = sim.get_frequent_routes()
-
-        st.subheader("🔁 Rutas más frecuentes")
-        for ruta, freq in rutas:
-            st.markdown(f"- **{ruta}** | Frecuencia: {freq}")
-
-        st.subheader("🌳 Visualización del árbol AVL")
-        visualizer = AVLVisualizer(sim.routes_avl)
-        visualizer.draw()
-    else:
-        st.info("Inicia una simulación para ver rutas frecuentes.")
-
-# ==============================
-# 📈 PESTAÑA 5: General Statistics
-# ==============================
-
-with tabs[4]:
-    st.header("📈 Estadísticas Generales")
-
-    st.info("(En construcción: Gráficas de nodos visitados y distribución de roles)")
