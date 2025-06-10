@@ -9,6 +9,9 @@ from sim.init_simulation import generar_red
 from sim.simulation import Simulation
 from visual.avl_visualizer import AVLVisualizer
 import random
+import pandas as pd
+from collections import deque
+
 
 
 # Configuración de la interfaz
@@ -44,11 +47,46 @@ with tabs[0]:
     if st.button("📊 Start Simulation"):
         graph = generar_red(n_nodes, m_edges, n_almacen, n_recarga, n_clientes)
         sim = Simulation(graph)
+
+        # Registrar clientes automáticamente
+        for i in range(n_clientes):
+            client_id = f"C{i:03}"
+            name = f"Cliente {i}"
+            client_type = random.choice(["premium", "normal"])
+            sim.register_client(client_id, name, client_type)
+
+        # Función para encontrar rutas válidas con BFS
+        def bfs(graph, start, end):
+            visited = set()
+            queue = deque([(start, [start], 0)])
+
+            while queue:
+                current, path, cost = queue.popleft()
+                if current == end:
+                    return path, cost
+                for neighbor in graph.neighbors(current):
+                    if neighbor not in path:
+                        edge = graph.get_edge(current, neighbor)
+                        queue.append((neighbor, path + [neighbor], cost + edge.element()))
+            return None, None
+
+        vertices = list(graph.vertices())
+        client_nodes = [v for v in vertices if "Cliente" in str(v)]
+        if len(client_nodes) >= 2:
+            for i in range(min(n_orders, len(client_nodes))):
+                origin = random.choice(client_nodes)
+                destination = random.choice([v for v in client_nodes if v != origin])
+                path, cost = bfs(graph, origin, destination)
+                if path:
+                    sim.create_order(f"C{i:03}", origin, destination, priority=1, path=path, cost=cost)
+
         st.session_state["graph"] = graph
         st.session_state["sim"] = sim
         st.session_state["simulation_started"] = True
         st.session_state["adapter"] = NetworkXAdapter(graph)
+
         st.success("Simulación iniciada correctamente 🚀")
+
 
 # =============================
 # 🌍 PESTAÑA 2: Explore Network
@@ -113,32 +151,20 @@ with tabs[2]:
 
         st.subheader("👤 Clients")
         clients = sim.get_clients()
-        for client in clients:
-            client_type = client.get("type")
-            if not client_type:
-                # Asignar aleatoriamente tipo si no existe
-                client_type = random.choice(["premium", "normal"])
-            st.json({
-                "client_id": client["id"],
-                "name": client["name"],
-                "type": client_type,
-                "total_orders": client["total_orders"]
-            })
+        if clients:
+            for client in clients:
+                if "type" not in client:
+                    client["type"] = random.choice(["premium", "normal"])
+            st.dataframe(pd.DataFrame(clients))
+        else:
+            st.info("No hay clientes registrados todavía.")
 
         st.subheader("📦 Orders")
         orders = sim.get_orders()
-        for order in orders:
-            st.json({
-                "order_id": order["id"],
-                "client": order.get("client", order["client_id"]),
-                "client_id": order["client_id"],
-                "origin": str(order["origin"]),
-                "destination": str(order["destination"]),
-                "status": order["status"],
-                "priority": order["priority"],
-                "created_at": order["created_at"],
-                "delivered_at": order.get("delivered_at", None),
-                "route_cost": order.get("total_cost", 0)
-            })
+        if orders:
+            st.dataframe(pd.DataFrame(orders))
+        else:
+            st.info("No hay órdenes registradas todavía.")
     else:
         st.info("Inicia una simulación para ver clientes y órdenes.")
+
