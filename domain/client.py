@@ -1,10 +1,11 @@
 # domain/client.py
 
 class Client:
-    def __init__(self, client_id, name):
+    def __init__(self, client_id, name, client_type="premium"):
         self.client_id = client_id
         self.name = name
-        self.orders = []  # Lista de IDs de órdenes
+        self.client_type = client_type
+        self.orders = []
 
     def add_order(self, order_id):
         self.orders.append(order_id)
@@ -16,6 +17,7 @@ class Client:
         return {
             "id": self.client_id,
             "name": self.name,
+            "type": self.client_type,
             "total_orders": self.total_orders()
         }
 

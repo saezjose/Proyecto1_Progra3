@@ -8,6 +8,8 @@ from visual.networkx_adapter import NetworkXAdapter
 from sim.init_simulation import generar_red
 from sim.simulation import Simulation
 from visual.avl_visualizer import AVLVisualizer
+import random
+
 
 # Configuración de la interfaz
 st.set_page_config(page_title="Sistema de Drones", layout="wide")
@@ -96,3 +98,47 @@ with tabs[1]:
             adapter.draw(st_target=st)
     else:
         st.info("Inicia una simulación en la pestaña anterior para usar esta sección.")
+
+        
+
+# ==========================
+# 🌐 PESTAÑA 3: Clients & Orders
+# ==========================
+
+with tabs[2]:
+    st.header("🌐 Clients and Orders")
+
+    if st.session_state.get("simulation_started"):
+        sim = st.session_state["sim"]
+
+        st.subheader("👤 Clients")
+        clients = sim.get_clients()
+        for client in clients:
+            client_type = client.get("type")
+            if not client_type:
+                # Asignar aleatoriamente tipo si no existe
+                client_type = random.choice(["premium", "normal"])
+            st.json({
+                "client_id": client["id"],
+                "name": client["name"],
+                "type": client_type,
+                "total_orders": client["total_orders"]
+            })
+
+        st.subheader("📦 Orders")
+        orders = sim.get_orders()
+        for order in orders:
+            st.json({
+                "order_id": order["id"],
+                "client": order.get("client", order["client_id"]),
+                "client_id": order["client_id"],
+                "origin": str(order["origin"]),
+                "destination": str(order["destination"]),
+                "status": order["status"],
+                "priority": order["priority"],
+                "created_at": order["created_at"],
+                "delivered_at": order.get("delivered_at", None),
+                "route_cost": order.get("total_cost", 0)
+            })
+    else:
+        st.info("Inicia una simulación para ver clientes y órdenes.")
