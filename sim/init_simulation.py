@@ -7,7 +7,6 @@ from model.graph import Graph
 from model.vertex import Vertex
 from model.edge import Edge
 
-
 def generar_red(n_nodes, m_edges, n_almacen, n_recarga, n_clientes):
     graph = Graph(directed=True)
 
@@ -21,8 +20,14 @@ def generar_red(n_nodes, m_edges, n_almacen, n_recarga, n_clientes):
         v = graph.insert_vertex(label)
         vertices.append(v)
 
-    # Agregar aristas aleatorias
-    added = set()
+    # Paso 1: Conectar todos los nodos en una cadena para asegurar conexidad
+    for i in range(n_nodes - 1):
+        u = vertices[i]
+        v = vertices[i + 1]
+        graph.insert_edge(u, v, random.randint(1, 10))
+
+    # Paso 2: Agregar aristas aleatorias adicionales sin duplicar
+    added = set((vertices[i], vertices[i + 1]) for i in range(n_nodes - 1))
     while len(added) < m_edges:
         u, v = random.sample(vertices, 2)
         if (u, v) not in added:

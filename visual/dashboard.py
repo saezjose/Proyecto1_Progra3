@@ -9,6 +9,7 @@ from sim.init_simulation import generar_red
 from sim.simulation import Simulation
 from visual.avl_visualizer import AVLVisualizer
 
+
 # Configuración de la interfaz
 st.set_page_config(page_title="Sistema de Drones", layout="wide")
 
