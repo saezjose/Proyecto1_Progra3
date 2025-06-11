@@ -91,7 +91,6 @@ with tabs[0]:
 
         st.success("Simulación iniciada correctamente 🚀")
 
-
 # =============================
 # 🌍 PESTAÑA 2: Explore Network
 # =============================
@@ -130,25 +129,27 @@ with tabs[1]:
 
             if path:
                 st.success(f"Ruta encontrada: {' → '.join(str(v) for v in path)} | Costo: {cost}")
-                adapter.draw(st_target=st, highlight_path=path)
 
-                if st.button("✅ Completar Envío y Crear Orden"):
-                    client_id = f"CLI-{random.randint(100, 999)}"
-                    sim.register_client(client_id, str(destination))
-                    order = sim.create_order(client_id, origin, destination, priority=1, path=path, cost=cost)
-                    # ✅ Obtener la orden recién creada desde el HashMap
-                    orden_en_mapa = sim.orders.get(order.order_id)
-                    if orden_en_mapa:
-                        orden_en_mapa.complete_delivery(cost)
-                        sim.orders.set(order.order_id, orden_en_mapa)
-                    st.success(f"Orden creada y entregada para el cliente: {client_id}")
-                    st.experimental_rerun()  # 🔁 Refrescar pantalla
+                # ✅ Crear y completar orden directamente
+                client_id = f"CLI-{random.randint(100, 999)}"
+                sim.register_client(client_id, str(destination))
+                order = sim.create_order(client_id, origin, destination, priority=1, path=path, cost=cost)
+
+                orden_en_mapa = sim.orders.get(order.order_id)
+                if orden_en_mapa:
+                    orden_en_mapa.complete_delivery(cost)
+                    sim.orders.set(order.order_id, orden_en_mapa)
+
+                st.success(f"Orden creada y entregada para el cliente: {client_id}")
+                adapter.draw(st_target=st, highlight_path=path)  # ✅ Mostrar ruta en rojo
+                
             else:
                 st.error("No se encontró una ruta entre los nodos seleccionados.")
         else:
-            adapter.draw(st_target=st)
+            adapter.draw(st_target=st)  # ✅ Dibujar grafo si no se ha calculado ruta
     else:
         st.info("Inicia una simulación en la pestaña anterior para usar esta sección.")
+
 
 
         
