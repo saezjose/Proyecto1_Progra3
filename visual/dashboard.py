@@ -209,7 +209,7 @@ with tabs[3]:
             st.subheader("📊 AVL Tree Visualization")
             from visual.avl_visualizer import AVLVisualizer
             visualizer = AVLVisualizer(sim.routes_avl)
-            visualizer.draw()
+            visualizer.draw(use_hierarchy=True)
         else:
             st.warning("No hay rutas registradas aún.")
     else:
