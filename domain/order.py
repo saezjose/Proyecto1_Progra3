@@ -2,7 +2,7 @@
 from datetime import datetime
 
 class Order:
-    def __init__(self, order_id, client_id, origin, destination, priority=1):
+    def __init__(self, order_id, client_id, origin, destination, priority=1, path=None):
         self.order_id = order_id
         self.client_id = client_id
         self.origin = origin
@@ -12,6 +12,7 @@ class Order:
         self.delivered_at = None
         self.status = "pending"
         self.total_cost = 0
+        self.path = path or []
 
     def complete_delivery(self, cost):
         self.status = "delivered"
@@ -28,7 +29,10 @@ class Order:
             "status": self.status,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "delivered_at": self.delivered_at.strftime("%Y-%m-%d %H:%M:%S") if self.delivered_at else None,
-            "total_cost": self.total_cost
+            "total_cost": self.total_cost,
+            "path": [str(p) for p in self.path]  # ✅ Agregado
+
+            
         }
 
     def __str__(self):

@@ -24,7 +24,7 @@ class Simulation:
         order_id = f"ORD{self.order_counter}"
         self.order_counter += 1
 
-        order = Order(order_id, client_id, origin, destination, priority)
+        order = Order(order_id, client_id, origin, destination, priority, path=path)
         order.complete_delivery(cost)
         self.orders.set(order_id, order)
 
@@ -39,6 +39,8 @@ class Simulation:
 
     def get_orders(self):
         return [o.to_dict() for _, o in self.orders.items()]
+    
+
 
     def get_clients(self):
         return [c.to_dict() for _, c in self.clients.items()]

@@ -157,7 +157,7 @@ class NetworkXAdapter:
             )
 
         plt.axis("off")
-        plt.tight_layout()
+
 
         # --- Envío a Streamlit o pantalla ---
         if st_target is not None:

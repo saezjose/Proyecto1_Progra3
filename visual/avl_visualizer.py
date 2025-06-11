@@ -31,6 +31,6 @@ class AVLVisualizer:
         plt.figure(figsize=(12, 6))
         nx.draw(self.graph, pos, with_labels=True, node_size=2500, node_color="skyblue", font_size=10)
         plt.title("AVL Tree Visualization")
-        plt.tight_layout()
+        plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
         st.pyplot(plt)  # muestra dentro de Streamlit
 

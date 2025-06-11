@@ -11,7 +11,8 @@ def generar_red(n_nodes, m_edges, n_almacen, n_recarga, n_clientes):
     graph = Graph(directed=True)
 
     # Asignar roles
-    roles = ["ROL"] * n_almacen + ["Bateria"] * n_recarga + ["Cliente"] * n_clientes
+    roles = ["📦"] * n_almacen + ["🔋"] * n_recarga + ["👤"] * n_clientes
+
     random.shuffle(roles)
 
     vertices = []
@@ -37,4 +38,7 @@ def generar_red(n_nodes, m_edges, n_almacen, n_recarga, n_clientes):
     # Guardar los vértices para uso en selectbox (opcional)
     graph._vertices_list = vertices
 
-    return graph
+    from sim.simulation import Simulation
+    sim = Simulation(graph)
+    return graph, sim
+

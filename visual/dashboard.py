@@ -11,6 +11,8 @@ from visual.avl_visualizer import AVLVisualizer
 import random
 import pandas as pd
 from collections import deque
+import matplotlib.pyplot as plt
+import math
 
 
 
@@ -45,8 +47,10 @@ with tabs[0]:
     """.format(n_almacen, n_recarga, n_clientes))
 
     if st.button("📊 Start Simulation"):
-        graph = generar_red(n_nodes, m_edges, n_almacen, n_recarga, n_clientes)
-        sim = Simulation(graph)
+        graph, sim = generar_red(n_nodes, m_edges, n_almacen, n_recarga, n_clientes)
+        st.session_state["graph"] = graph
+        st.session_state["sim"] = sim
+
 
         # Registrar clientes automáticamente
         for i in range(n_clientes):
@@ -71,7 +75,7 @@ with tabs[0]:
             return None, None
 
         vertices = list(graph.vertices())
-        client_nodes = [v for v in vertices if "Cliente" in str(v)]
+        client_nodes = [v for v in graph.vertices() if str(v).startswith("👤")]
         if len(client_nodes) >= 2:
             for i in range(min(n_orders, len(client_nodes))):
                 origin = random.choice(client_nodes)
@@ -168,25 +172,26 @@ with tabs[2]:
     else:
         st.info("Inicia una simulación para ver clientes y órdenes.")
 
- # =============================
+
+# =============================
 # 📋 PESTAÑA 4: Route Analytics
 # =============================
 
 with tabs[3]:
-    st.header("📋 Route Analytics")
+    st.header("📋 Rutas frecuentes")
 
-    if st.session_state.get("simulation_started"):
+    if "sim" in st.session_state:
         sim = st.session_state["sim"]
         rutas = sim.get_frequent_routes()
 
         if rutas:
             rutas.sort()  # Ordenar por recorrido (orden lexicográfico)
 
-            st.subheader("🔁 Rutas más frecuentes")
-            for ruta, freq in rutas:
-                st.markdown(f"- **{ruta}** | Frecuencia: {freq}")
+            st.subheader("📋 rutas frecuentesñ")
+            for i, (ruta, freq) in enumerate(rutas, start=1):
+                st.markdown(f"{i}. Route hash: {ruta} | Frequency: {freq}")
 
-            st.subheader("🌳 Visualización del árbol AVL")
+            st.subheader("📊 AVL Tree Visualization")
             from visual.avl_visualizer import AVLVisualizer
             visualizer = AVLVisualizer(sim.routes_avl)
             visualizer.draw()
@@ -195,56 +200,69 @@ with tabs[3]:
     else:
         st.info("Inicia una simulación para analizar rutas.")
 
+
+
 # ==============================
 # 📈 PESTAÑA 5: General Statistics
 # ==============================
+
 with tabs[4]:
     st.header("📈 General Statistics")
+    st.write("DEBUG - graph:", "OK" if "graph" in st.session_state else "MISSING")
+    st.write("DEBUG - sim:", "OK" if "sim" in st.session_state else "MISSING")
 
-import matplotlib.pyplot as plt
-import math
 
-# Asegurar que se guarde el grafo si no existe
-if "graph" not in st.session_state and st.session_state.get("params"):
-    from sim.init_simulation import generar_red
-    params = st.session_state["params"]
-    st.session_state["graph"] = generar_red(
-        params["n_nodes"],
-        params["m_edges"],
-        params["n_almacen"],
-        params["n_recarga"],
-        params["n_clientes"]
-    )
+    
 
-graph = st.session_state.get("graph")
-if graph:
-    roles = {"📦": "Almacenamiento", "🔋": "Recarga", "👤": "Cliente"}
-    role_counts = {"📦": 0, "🔋": 0, "👤": 0}
+    graph = st.session_state.get("graph")
+    sim = st.session_state.get("sim")
 
-    for v in graph.vertices():
-        for symbol in roles:
-            if str(v).startswith(symbol):
-                role_counts[symbol] += 1
+    if graph and sim:
+        roles = {"📦": "Storage", "🔋": "Recharge", "👤": "Client"}
+        role_counts = {"📦": 0, "🔋": 0, "👤": 0}
+        visit_counts = {"📦": {}, "🔋": {}, "👤": {}}
 
-    labels = [roles[k] for k in role_counts]
-    sizes = [int(role_counts[k]) if role_counts[k] and not math.isnan(role_counts[k]) else 0 for k in role_counts]
+        for v in graph.vertices():
+            name = str(v)
+            for symbol in roles:
+                if name.startswith(symbol):
+                    role_counts[symbol] += 1
+                    visit_counts[symbol][name] = 0
 
-    if sum(sizes) > 0:
-        # Gráfico de torta - proporción de roles
-        st.subheader("🥧 Distribución de Nodos por Rol")
-        fig1, ax1 = plt.subplots()
-        ax1.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=90)
-        ax1.axis("equal")
-        st.pyplot(fig1)
+        # Simulación: contar visitas reales por nodo en las rutas
+        for order in sim.get_orders():
+            for node in order.get("path", []):
+                node_str = str(node)
+                for symbol in visit_counts:
+                    if node_str in visit_counts[symbol]:
+                        visit_counts[symbol][node_str] += 1
 
-        # Gráfico de barras - cantidad por rol
-        st.subheader("📊 Cantidad de Nodos por Rol")
-        fig2, ax2 = plt.subplots()
-        ax2.bar(labels, sizes, color=["#ffd166", "#118ab2", "#ef476f"])
-        ax2.set_ylabel("Cantidad")
-        ax2.set_title("Cantidad de nodos por tipo")
-        st.pyplot(fig2)
+        labels = [roles[k] for k in role_counts]
+        sizes = [int(role_counts[k]) if role_counts[k] and not math.isnan(role_counts[k]) else 0 for k in role_counts]
+
+        if sum(sizes) > 0:
+            st.subheader("📊 Top Visited Nodes by Role")
+
+            fig, axs = plt.subplots(1, 3, figsize=(18, 5))
+
+            for i, symbol in enumerate(["👤", "🔋", "📦"]):
+                sorted_visits = sorted(visit_counts[symbol].items(), key=lambda x: x[1], reverse=True)
+                names = [item[0] for item in sorted_visits[:5]]
+                counts = [item[1] for item in sorted_visits[:5]]
+                axs[i].bar(names, counts, color="#87CEFA")
+                axs[i].set_title(f"Most Visited {roles[symbol]} Nodes")
+                axs[i].tick_params(axis='x', rotation=45)
+
+            st.pyplot(fig)
+
+            # 🥧 Gráfico de torta - proporción de roles
+            st.subheader("🥧 Pie Chart: Node Role Distribution")
+            fig1, ax1 = plt.subplots()
+            ax1.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=90)
+            ax1.axis("equal")
+            st.pyplot(fig1)
+        else:
+            st.warning("No hay nodos registrados para mostrar estadísticas.")
     else:
-        st.warning("No hay nodos registrados para mostrar estadísticas.")
-else:
-    st.warning("No se encontró un grafo generado.")
+        st.warning("No se encontró un grafo generado o simulación activa.")
+
