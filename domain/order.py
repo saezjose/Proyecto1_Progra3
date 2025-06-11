@@ -21,19 +21,22 @@ class Order:
 
     def to_dict(self):
         return {
-            "id": self.order_id,
+            "order_id": self.order_id,
+            "client": f"Cliente{self.client_id[-1]}",  # opcional, para visualización
             "client_id": self.client_id,
             "origin": str(self.origin),
             "destination": str(self.destination),
             "priority": self.priority,
             "status": self.status,
-            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "delivered_at": self.delivered_at.strftime("%Y-%m-%d %H:%M:%S") if self.delivered_at else None,
-            "total_cost": self.total_cost,
-            "path": [str(p) for p in self.path]  # ✅ Agregado
-
-            
+            "created_at": self.created_at.isoformat(),
+            "delivered_at": self.delivered_at.isoformat() if self.delivered_at else None,
+            "route_cost": self.total_cost,
+            "path": [str(p) for p in self.path]  # ✅ Manteniendo el path original
         }
+
+    
+
+    
 
     def __str__(self):
         return f"Orden({self.order_id}) para cliente {self.client_id}"

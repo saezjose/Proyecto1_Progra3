@@ -102,6 +102,7 @@ with tabs[1]:
     if st.session_state.get("simulation_started"):
         graph = st.session_state["graph"]
         adapter = st.session_state["adapter"]
+        sim = st.session_state["sim"]
 
         st.subheader("🚁 Visualización del grafo")
 
@@ -112,34 +113,43 @@ with tabs[1]:
         destination = st.selectbox("Nodo de Destino", vertices, format_func=str)
 
         if st.button("✈ Calculate Route"):
-            from collections import deque
-
             def bfs_shortest_path(graph, start, goal):
                 visited = set()
-                queue = deque([(start, [start])])
-
+                queue = deque([(start, [start], 0)])
                 while queue:
-                    current, path = queue.popleft()
+                    current, path, cost = queue.popleft()
                     if current == goal:
-                        return path
+                        return path, cost
                     for neighbor in graph.neighbors(current):
-                        if neighbor not in visited:
-                            visited.add(neighbor)
-                            queue.append((neighbor, path + [neighbor]))
-                return None
+                        if neighbor not in path:
+                            edge = graph.get_edge(current, neighbor)
+                            queue.append((neighbor, path + [neighbor], cost + edge.element()))
+                return None, None
 
-            path = bfs_shortest_path(graph, origin, destination)
+            path, cost = bfs_shortest_path(graph, origin, destination)
 
             if path:
-                st.success("Ruta encontrada:")
-                st.markdown(" → ".join(str(v) for v in path))
+                st.success(f"Ruta encontrada: {' → '.join(str(v) for v in path)} | Costo: {cost}")
                 adapter.draw(st_target=st, highlight_path=path)
+
+                if st.button("✅ Completar Envío y Crear Orden"):
+                    client_id = f"CLI-{random.randint(100, 999)}"
+                    sim.register_client(client_id, str(destination))
+                    order = sim.create_order(client_id, origin, destination, priority=1, path=path, cost=cost)
+                    # ✅ Obtener la orden recién creada desde el HashMap
+                    orden_en_mapa = sim.orders.get(order.order_id)
+                    if orden_en_mapa:
+                        orden_en_mapa.complete_delivery(cost)
+                        sim.orders.set(order.order_id, orden_en_mapa)
+                    st.success(f"Orden creada y entregada para el cliente: {client_id}")
+                    st.experimental_rerun()  # 🔁 Refrescar pantalla
             else:
                 st.error("No se encontró una ruta entre los nodos seleccionados.")
         else:
             adapter.draw(st_target=st)
     else:
         st.info("Inicia una simulación en la pestaña anterior para usar esta sección.")
+
 
         
 
@@ -166,6 +176,10 @@ with tabs[2]:
         st.subheader("📦 Orders")
         orders = sim.get_orders()
         if orders:
+            # Ajustar visualización del campo delivered_at
+            for order in orders:
+                if order["delivered_at"] in [None, "null", "", "None"]:
+                    order["delivered_at"] = "Aún no se completó el envío"
             st.dataframe(pd.DataFrame(orders))
         else:
             st.info("No hay órdenes registradas todavía.")

@@ -24,14 +24,16 @@ class Simulation:
         order_id = f"ORD{self.order_counter}"
         self.order_counter += 1
 
+        # Crear orden SIN marcarla como entregada aún
         order = Order(order_id, client_id, origin, destination, priority, path=path)
-        order.complete_delivery(cost)
+        order.total_cost = cost
         self.orders.set(order_id, order)
 
         client = self.clients.get(client_id)
         if client:
             client.add_order(order_id)
 
+        # Registrar la ruta en el árbol AVL
         route = Route(path, cost)
         self.routes_avl.insert(route.to_key())
 
@@ -39,8 +41,6 @@ class Simulation:
 
     def get_orders(self):
         return [o.to_dict() for _, o in self.orders.items()]
-    
-
 
     def get_clients(self):
         return [c.to_dict() for _, c in self.clients.items()]
@@ -58,3 +58,4 @@ class Simulation:
 
         _inorder(self.routes_avl.root)
         return result
+
