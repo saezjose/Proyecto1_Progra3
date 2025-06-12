@@ -98,7 +98,7 @@ class NetworkXAdapter:
         self,
         *,
         highlight_path: Optional[Sequence] = None,
-        show_weights: bool = False,
+        show_weights: bool = True,
         figsize: Tuple[int, int] = (10, 6),
         st_target=None,
     ) -> None:
@@ -157,7 +157,6 @@ class NetworkXAdapter:
             )
 
         plt.axis("off")
-
 
         # --- Envío a Streamlit o pantalla ---
         if st_target is not None:
