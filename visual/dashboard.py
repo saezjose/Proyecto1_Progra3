@@ -11,8 +11,10 @@ from visual.avl_visualizer import AVLVisualizer
 import random
 import pandas as pd
 from collections import deque
-import matplotlib.pyplot as plt
+import plotly.express as px
 import math
+
+
 
 
 
@@ -202,7 +204,7 @@ with tabs[3]:
         if rutas:
             rutas.sort()  # Ordenar por recorrido (orden lexicográfico)
 
-            st.subheader("📋 rutas frecuentesñ")
+            st.subheader("📋 rutas frecuentes")
             for i, (ruta, freq) in enumerate(rutas, start=1):
                 st.markdown(f"{i}. Route hash: {ruta} | Frequency: {freq}")
 
@@ -216,18 +218,16 @@ with tabs[3]:
         st.info("Inicia una simulación para analizar rutas.")
 
 
-
 # ==============================
 # 📈 PESTAÑA 5: General Statistics
 # ==============================
+
+
 
 with tabs[4]:
     st.header("📈 General Statistics")
     st.write("DEBUG - graph:", "OK" if "graph" in st.session_state else "MISSING")
     st.write("DEBUG - sim:", "OK" if "sim" in st.session_state else "MISSING")
-
-
-    
 
     graph = st.session_state.get("graph")
     sim = st.session_state.get("sim")
@@ -258,26 +258,36 @@ with tabs[4]:
         if sum(sizes) > 0:
             st.subheader("📊 Top Visited Nodes by Role")
 
-            fig, axs = plt.subplots(1, 3, figsize=(18, 5))
+            col1, col2, col3 = st.columns(3)
+            cols = {"👤": col1, "🔋": col2, "📦": col3}
 
-            for i, symbol in enumerate(["👤", "🔋", "📦"]):
-                sorted_visits = sorted(visit_counts[symbol].items(), key=lambda x: x[1], reverse=True)
-                names = [item[0] for item in sorted_visits[:5]]
-                counts = [item[1] for item in sorted_visits[:5]]
-                axs[i].bar(names, counts, color="#87CEFA")
-                axs[i].set_title(f"Most Visited {roles[symbol]} Nodes")
-                axs[i].tick_params(axis='x', rotation=45)
-
-            st.pyplot(fig)
+            for symbol in ["👤", "🔋", "📦"]:
+                sorted_visits = sorted(visit_counts[symbol].items(), key=lambda x: x[1], reverse=True)[:5]
+                if sorted_visits:
+                    df_bar = pd.DataFrame(sorted_visits, columns=["Nodo", "Visitas"])
+                    fig = px.bar(
+                        df_bar,
+                        x="Nodo",
+                        y="Visitas",
+                        title=f"Most Visited {roles[symbol]} Nodes",
+                        text_auto=True
+                    )
+                    fig.update_traces(marker_color="#1E65C9", hovertemplate="Nodo: %{x}<br>Visitas: %{y}")
+                    with cols[symbol]:
+                        st.plotly_chart(fig, use_container_width=True)
 
             # 🥧 Gráfico de torta - proporción de roles
             st.subheader("🥧 Pie Chart: Node Role Distribution")
-            fig1, ax1 = plt.subplots()
-            ax1.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=90)
-            ax1.axis("equal")
-            st.pyplot(fig1)
+            df_pie = pd.DataFrame({
+                "Rol": labels,
+                "Cantidad": sizes
+            })
+            fig_pie = px.pie(df_pie, values="Cantidad", names="Rol", title="Distribución de Roles", hole=0.3)
+            st.plotly_chart(fig_pie, use_container_width=True)
         else:
             st.warning("No hay nodos registrados para mostrar estadísticas.")
     else:
         st.warning("No se encontró un grafo generado o simulación activa.")
+
+
 
