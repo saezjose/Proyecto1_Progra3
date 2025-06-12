@@ -79,7 +79,7 @@ with tabs[0]:
         vertices = list(graph.vertices())
         client_nodes = [v for v in graph.vertices() if str(v).startswith("👤")]
         if len(client_nodes) >= 2:
-            for i in range(min(n_orders, len(client_nodes))):
+            for i in range(n_orders):
                 origin = random.choice(client_nodes)
                 destination = random.choice([v for v in client_nodes if v != origin])
                 path, cost = bfs(graph, origin, destination)
@@ -108,7 +108,11 @@ with tabs[1]:
         st.subheader("🚁 Visualización del grafo")
 
         st.subheader("🧱 Calcular Ruta")
-        vertices = getattr(graph, "_vertices_list", list(graph.vertices()))
+        vertices = sorted(
+            getattr(graph, "_vertices_list", list(graph.vertices())),
+            key=lambda v: int(v.element().id[1:]) if hasattr(v.element(), "id") else str(v)
+        )
+
 
         origin = st.selectbox("Nodo de Origen", vertices, format_func=str)
         destination = st.selectbox("Nodo de Destino", vertices, format_func=str)

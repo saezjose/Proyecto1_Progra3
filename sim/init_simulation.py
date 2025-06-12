@@ -6,19 +6,26 @@ import random
 from model.graph import Graph
 from model.vertex import Vertex
 from model.edge import Edge
+from model.node_data import NodeData
 
 def generar_red(n_nodes, m_edges, n_almacen, n_recarga, n_clientes):
     graph = Graph(directed=True)
 
-    # Asignar roles
-    roles = ["📦"] * n_almacen + ["🔋"] * n_recarga + ["👤"] * n_clientes
+    # Crear roles con metadata explícita (dict)
+    roles = (
+        [{"role": "almacen", "emoji": "📦", "id": f"N{i}"} for i in range(n_almacen)] +
+        [{"role": "recarga", "emoji": "🔋", "id": f"N{i}"} for i in range(n_recarga)] +
+        [{"role": "cliente", "emoji": "👤", "id": f"N{i}"} for i in range(n_clientes)]
+    )
 
     random.shuffle(roles)
 
     vertices = []
     for i in range(n_nodes):
-        label = f"{roles[i]} N{i}"
-        v = graph.insert_vertex(label)
+        data = roles[i]
+        label = f"{data['emoji']} {data['id']}"
+        vdata = NodeData(label, data["role"], data["id"])
+        v = graph.insert_vertex(vdata)
         vertices.append(v)
 
     # Paso 1: Conectar todos los nodos en una cadena para asegurar conexidad
@@ -41,4 +48,3 @@ def generar_red(n_nodes, m_edges, n_almacen, n_recarga, n_clientes):
     from sim.simulation import Simulation
     sim = Simulation(graph)
     return graph, sim
-
