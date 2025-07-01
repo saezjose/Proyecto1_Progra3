@@ -13,8 +13,81 @@ import pandas as pd
 from collections import deque
 import plotly.express as px
 import math
+from streamlit_folium import folium_static
+from visual.map_builder import generar_mapa  # Asegúrate de que ya tengas este archivo creado
+import networkx as nx 
+from visual.report_generator import generar_pdf
 
 
+
+
+
+def calcular_mst(graph):
+    import networkx as nx  # por si está afuera
+
+    G = nx.Graph()
+    
+    for v in graph.vertices():
+        G.add_node(str(v))
+    
+    for e in graph.edges():
+        u, v = e.endpoints()
+        peso = e.element()
+        G.add_edge(str(u), str(v), weight=peso)
+
+    mst = nx.minimum_spanning_tree(G, algorithm="kruskal")
+    mst_edges = [(u, v, mst[u][v]["weight"]) for u, v in mst.edges()]
+    return mst_edges
+
+
+def calcular_ruta_optima(graph, origen, destino, algoritmo="Dijkstra", max_autonomia=50):
+    import networkx as nx
+    G = nx.DiGraph()
+
+    for v in graph.vertices():
+        G.add_node(str(v))
+
+    for e in graph.edges():
+        u, v = e.endpoints()
+        G.add_edge(str(u), str(v), weight=e.element())
+
+    def calcular_camino(source, target):
+        try:
+            if algoritmo == "Dijkstra":
+                path = nx.dijkstra_path(G, str(source), str(target), weight="weight")
+                cost = nx.dijkstra_path_length(G, str(source), str(target), weight="weight")
+            elif algoritmo == "Floyd-Warshall":
+                pred, dist = nx.floyd_warshall_predecessor_and_distance(G, weight="weight")
+                path = []
+                current = str(target)
+                while current != str(source):
+                    path.insert(0, current)
+                    current = pred[str(source)][current]
+                path.insert(0, str(source))
+                cost = dist[str(source)][str(target)]
+            else:
+                return None, None
+            return path, cost
+        except:
+            return None, None
+
+    # Intentar ruta directa
+    path, cost = calcular_camino(origen, destino)
+    if path and cost <= max_autonomia:
+        return path, cost
+
+    # Si supera autonomía, buscar vía recarga
+    recargas = [v for v in graph.vertices() if str(v).startswith("🔋")]
+    for nodo_recarga in recargas:
+        tramo1, cost1 = calcular_camino(origen, nodo_recarga)
+        tramo2, cost2 = calcular_camino(nodo_recarga, destino)
+        if tramo1 and tramo2 and cost1 <= max_autonomia and cost2 <= max_autonomia:
+            nueva_ruta = tramo1[:-1] + tramo2  # evitar repetir nodo recarga
+            nuevo_costo = cost1 + cost2
+            return nueva_ruta, nuevo_costo
+
+    # No se encontró ruta válida
+    return None, None
 
 
 
@@ -96,66 +169,77 @@ with tabs[0]:
 # =============================
 # 🌍 PESTAÑA 2: Explore Network
 # =============================
-
 with tabs[1]:
     st.header("🌍 Explora la Red de Drones")
 
     if st.session_state.get("simulation_started"):
         graph = st.session_state["graph"]
-        adapter = st.session_state["adapter"]
         sim = st.session_state["sim"]
 
-        st.subheader("🚁 Visualización del grafo")
+        st.subheader("🗺️ Visualización en Mapa Real")
 
-        st.subheader("🧱 Calcular Ruta")
-        vertices = sorted(
-            getattr(graph, "_vertices_list", list(graph.vertices())),
-            key=lambda v: int(v.element().id[1:]) if hasattr(v.element(), "id") else str(v)
-        )
+        nodos = []
+        aristas = []
 
+        for v in graph.vertices():
+            label = str(v)
+            tipo = label[0]
+            lat = -38.735 + random.uniform(-0.01, 0.01)
+            lon = -72.590 + random.uniform(-0.01, 0.01)
+            nodos.append((label, lat, lon, tipo))
 
-        origin = st.selectbox("Nodo de Origen", vertices, format_func=str)
-        destination = st.selectbox("Nodo de Destino", vertices, format_func=str)
+        for e in graph.edges():
+            u, v = e.endpoints()
+            aristas.append((str(u), str(v), e.element()))
 
-        if st.button("✈ Calculate Route"):
-            def bfs_shortest_path(graph, start, goal):
-                visited = set()
-                queue = deque([(start, [start], 0)])
-                while queue:
-                    current, path, cost = queue.popleft()
-                    if current == goal:
-                        return path, cost
-                    for neighbor in graph.neighbors(current):
-                        if neighbor not in path:
-                            edge = graph.get_edge(current, neighbor)
-                            queue.append((neighbor, path + [neighbor], cost + edge.element()))
-                return None, None
+        ruta = None
+        mst_resultado = None
 
-            path, cost = bfs_shortest_path(graph, origin, destination)
+        st.subheader("✈ Calcular Ruta entre Nodos")
 
+        origenes = [v for v in graph.vertices() if str(v).startswith("📦")]
+        destinos = [v for v in graph.vertices() if str(v).startswith("👤")]
+
+        origen = st.selectbox("📦 Nodo de Origen (Almacenamiento)", origenes, format_func=str)
+        destino = st.selectbox("👤 Nodo de Destino (Cliente)", destinos, format_func=str)
+
+        algoritmo = st.radio("⚙️ Algoritmo de Ruta", ["Dijkstra", "Floyd-Warshall"])
+
+        if st.button("✈ Calcular Ruta"):
+            path, cost = calcular_ruta_optima(graph, origen, destino, algoritmo)
             if path:
-                st.success(f"Ruta encontrada: {' → '.join(str(v) for v in path)} | Costo: {cost}")
+                ruta = path
+                st.session_state["ruta_costo"] = cost  # ✅ ESTA ES LA LÍNEA CLAVE
+                st.success(f"Ruta con {algoritmo}: {' → '.join(ruta)} | Costo total: {cost}")
+                # ✅ Resumen de vuelo
+                recarga_en_ruta = any("🔋" in n for n in ruta)
+                tiempo_estimado = round(cost * 1.2, 2)  # 20% extra de tiempo por curva u operación
 
-                # ✅ Crear y completar orden directamente
-                client_id = f"CLI-{random.randint(100, 999)}"
-                sim.register_client(client_id, str(destination))
-                order = sim.create_order(client_id, origin, destination, priority=1, path=path, cost=cost)
+                with st.expander("📝 Resumen de vuelo"):
+                    st.markdown(f"**Nodos visitados:** {len(ruta)}")
+                    st.markdown(f"**Ruta completa:** {' → '.join(ruta)}")
+                    st.markdown(f"**Distancia total:** {cost} unidades")
+                    st.markdown(f"**Tiempo estimado de vuelo:** {tiempo_estimado} minutos")
+                    st.markdown(f"**Recarga necesaria:** {'✅ Sí' if recarga_en_ruta else '❌ No'}")
 
-                orden_en_mapa = sim.orders.get(order.order_id)
-                if orden_en_mapa:
-                    orden_en_mapa.complete_delivery(cost)
-                    sim.orders.set(order.order_id, orden_en_mapa)
-
-                st.success(f"Orden creada y entregada para el cliente: {client_id}")
-                adapter.draw(st_target=st, highlight_path=path)  # ✅ Mostrar ruta en rojo
-                
             else:
-                st.error("No se encontró una ruta entre los nodos seleccionados.")
-        else:
-            adapter.draw(st_target=st)  # ✅ Dibujar grafo si no se ha calculado ruta
-    else:
-        st.info("Inicia una simulación en la pestaña anterior para usar esta sección.")
+                st.error("No se encontró una ruta válida entre esos nodos.")
 
+
+        st.subheader("🌲 Árbol de Expansión Mínima (Kruskal)")
+
+        if st.button("🌲 Mostrar MST"):
+            mst_resultado = calcular_mst(graph)
+            st.success(f"MST calculado con {len(mst_resultado)} conexiones.")
+
+        # Mostrar mapa con ruta y MST
+        mapa = generar_mapa(nodos, aristas, ruta=ruta, mst=mst_resultado)
+        if mapa:
+            folium_static(mapa)
+        else:
+            st.error("No se pudo generar el mapa.")
+    else:
+        st.info("Primero inicia una simulación en la pestaña anterior.")
 
 
         
@@ -208,7 +292,7 @@ with tabs[3]:
         if rutas:
             rutas.sort()  # Ordenar por recorrido (orden lexicográfico)
 
-            st.subheader("📋 rutas frecuentes")
+            st.subheader("📋 Rutas más frecuentes")
             for i, (ruta, freq) in enumerate(rutas, start=1):
                 st.markdown(f"{i}. Route hash: {ruta} | Frequency: {freq}")
 
@@ -216,10 +300,25 @@ with tabs[3]:
             from visual.avl_visualizer import AVLVisualizer
             visualizer = AVLVisualizer(sim.routes_avl)
             visualizer.draw(use_hierarchy=True)
+
+            st.subheader("📄 Generar Informe PDF")
+
+            if st.button("📄 Generar Informe"):
+                from visual.report_generator import generar_pdf
+
+                orders = sim.get_orders()
+                clients = sim.get_clients()
+                rutas_frecuentes = sim.get_frequent_routes()
+
+                ruta_pdf = generar_pdf(orders, clients, rutas_frecuentes)
+                with open(ruta_pdf, "rb") as file:
+                    st.download_button("⬇️ Descargar Informe PDF", file, file_name="informe_drones.pdf")
+
         else:
             st.warning("No hay rutas registradas aún.")
     else:
         st.info("Inicia una simulación para analizar rutas.")
+
 
 
 # ==============================
