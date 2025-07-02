@@ -14,7 +14,8 @@ from collections import deque
 import plotly.express as px
 import math
 from streamlit_folium import folium_static
-from visual.map_builder import generar_mapa  # Asegúrate de que ya tengas este archivo creado
+from visual.map.map_builder import generar_mapa  
+
 import networkx as nx 
 from visual.report_generator import generar_pdf
 
