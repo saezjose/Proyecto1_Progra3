@@ -2,7 +2,72 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
+from reportlab.platypus import Image
+
+# -----------------------------
+# Función para guardar los gráficos como PNG
+# -----------------------------
+import matplotlib.pyplot as plt
+import pandas as pd
 import os
+
+def guardar_graficos_pdf(graph, sim):
+    os.makedirs("temp", exist_ok=True)
+
+    # === Pie Chart: Distribución de nodos ===
+    roles = {"📦": "Storage", "🔋": "Recharge", "👤": "Clients"}
+    role_counts = {k: 0 for k in roles}
+    for v in graph.vertices():
+        for symbol in roles:
+            if str(v).startswith(symbol):
+                role_counts[symbol] += 1
+
+    labels = [roles[k] for k in role_counts]
+    sizes = [role_counts[k] for k in role_counts]
+
+    fig1, ax1 = plt.subplots()
+    ax1.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=90)
+    ax1.axis("equal")
+    plt.title("Distribución de Nodos")
+    plt.savefig("temp/nodos_pie_chart.png")
+    plt.close()
+
+    # === Barras: Nodos más visitados por tipo ===
+    visit_counts = {"📦": {}, "🔋": {}, "👤": {}}
+    for v in graph.vertices():
+        name = str(v)
+        for symbol in visit_counts:
+            if name.startswith(symbol):
+                visit_counts[symbol][name] = 0
+
+    for order in sim.get_orders():
+        for node in order.get("path", []):
+            node_str = str(node)
+            for symbol in visit_counts:
+                if node_str in visit_counts[symbol]:
+                    visit_counts[symbol][node_str] += 1
+
+    tipos_info = {
+        "👤": ("temp/top_visited_clients.png", "Top Visited Clients"),
+        "🔋": ("temp/top_visited_recharges.png", "Top Visited Recharge Stations"),
+        "📦": ("temp/top_visited_storages.png", "Top Visited Storage Nodes")
+    }
+
+    for tipo, (filename, title) in tipos_info.items():
+        sorted_visits = sorted(visit_counts[tipo].items(), key=lambda x: x[1], reverse=True)[:5]
+        if sorted_visits:
+            nodos = [n[0] for n in sorted_visits]
+            visitas = [n[1] for n in sorted_visits]
+
+            fig, ax = plt.subplots()
+            ax.bar(nodos, visitas, color="steelblue")
+            ax.set_title(title)
+            ax.set_xlabel("Nodo")
+            ax.set_ylabel("Visitas")
+            plt.savefig(filename)
+            plt.close()
+
+
 
 
 def generar_pdf(orders, clients, rutas):
@@ -88,6 +153,25 @@ def generar_pdf(orders, clients, rutas):
             c.showPage()
             y = height - 50
 
+      # Sección: Gráficos
+    img_height = 300
+    img_width = 400
+    margin = 50
+
+    for img_path in [
+        "temp/nodos_pie_chart.png",
+        "temp/top_visited_clients.png",
+        "temp/top_visited_recharges.png",
+        "temp/top_visited_storages.png",
+    ]:
+        if os.path.exists(img_path):
+            if y < img_height + margin:
+                c.showPage()
+                y = height - margin
+            c.drawImage(img_path, 50, y - img_height, width=img_width, height=img_height)
+            y -= img_height + 20  # deja un pequeño espacio entre gráficos
+
+    
     # Finalizar PDF
     c.save()
     return ruta_salida

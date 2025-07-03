@@ -326,15 +326,19 @@ with tabs[3]:
             st.subheader("📄 Generar Informe PDF")
 
             if st.button("📄 Generar Informe"):
-                from visual.report_generator import generar_pdf
-
                 orders = sim.get_orders()
                 clients = sim.get_clients()
                 rutas_frecuentes = sim.get_frequent_routes()
 
+                from report_generator import generar_pdf, guardar_graficos_pdf
+                graph = st.session_state["graph"]
+                
+                guardar_graficos_pdf(graph, sim)  # 💾 genera los .png antes del PDF
+
                 ruta_pdf = generar_pdf(orders, clients, rutas_frecuentes)
                 with open(ruta_pdf, "rb") as file:
                     st.download_button("⬇️ Descargar Informe PDF", file, file_name="informe_drones.pdf")
+
 
         else:
             st.warning("No hay rutas registradas aún.")
