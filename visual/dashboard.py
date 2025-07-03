@@ -95,6 +95,10 @@ def calcular_ruta_optima(graph, origen, destino, algoritmo="Dijkstra", max_auton
 # Configuración de la interfaz
 st.set_page_config(page_title="Sistema de Drones", layout="wide")
 
+if "mostrar_mst" not in st.session_state:
+    st.session_state["mostrar_mst"] = False
+
+
 # Sidebar de navegación (5 pestañas)
 tabs = st.tabs(["🔄 Run Simulation", "🌍 Explore Network", "🌐 Clients & Orders", "📋 Route Analytics", "📈 General Statistics"])
 
@@ -179,22 +183,26 @@ with tabs[1]:
 
         st.subheader("🗺️ Visualización en Mapa Real")
 
-        nodos = []
-        aristas = []
+        # Solo generar nodos/aristas una vez
+        if "nodos" not in st.session_state or "aristas" not in st.session_state:
+            nodos = []
+            aristas = []
+            for v in graph.vertices():
+                label = str(v)
+                tipo = label[0]
+                lat = -38.735 + random.uniform(-0.01, 0.01)
+                lon = -72.590 + random.uniform(-0.01, 0.01)
+                nodos.append((label, lat, lon, tipo))
 
-        for v in graph.vertices():
-            label = str(v)
-            tipo = label[0]
-            lat = -38.735 + random.uniform(-0.01, 0.01)
-            lon = -72.590 + random.uniform(-0.01, 0.01)
-            nodos.append((label, lat, lon, tipo))
+            for e in graph.edges():
+                u, v = e.endpoints()
+                aristas.append((str(u), str(v), e.element()))
 
-        for e in graph.edges():
-            u, v = e.endpoints()
-            aristas.append((str(u), str(v), e.element()))
+            st.session_state["nodos"] = nodos
+            st.session_state["aristas"] = aristas
 
-        ruta = None
-        mst_resultado = None
+        ruta = st.session_state.get("ruta")
+        mst_resultado = st.session_state.get("mst_resultado")
 
         st.subheader("✈ Calcular Ruta entre Nodos")
 
@@ -209,12 +217,13 @@ with tabs[1]:
         if st.button("✈ Calcular Ruta"):
             path, cost = calcular_ruta_optima(graph, origen, destino, algoritmo)
             if path:
+                st.session_state["ruta"] = path
+                st.session_state["ruta_costo"] = cost
                 ruta = path
-                st.session_state["ruta_costo"] = cost  # ✅ ESTA ES LA LÍNEA CLAVE
                 st.success(f"Ruta con {algoritmo}: {' → '.join(ruta)} | Costo total: {cost}")
-                # ✅ Resumen de vuelo
+
                 recarga_en_ruta = any("🔋" in n for n in ruta)
-                tiempo_estimado = round(cost * 1.2, 2)  # 20% extra de tiempo por curva u operación
+                tiempo_estimado = round(cost * 1.2, 2)
 
                 with st.expander("📝 Resumen de vuelo"):
                     st.markdown(f"**Nodos visitados:** {len(ruta)}")
@@ -222,25 +231,37 @@ with tabs[1]:
                     st.markdown(f"**Distancia total:** {cost} unidades")
                     st.markdown(f"**Tiempo estimado de vuelo:** {tiempo_estimado} minutos")
                     st.markdown(f"**Recarga necesaria:** {'✅ Sí' if recarga_en_ruta else '❌ No'}")
-
             else:
                 st.error("No se encontró una ruta válida entre esos nodos.")
 
-
         st.subheader("🌲 Árbol de Expansión Mínima (Kruskal)")
 
-        if st.button("🌲 Mostrar MST"):
-            mst_resultado = calcular_mst(graph)
-            st.success(f"MST calculado con {len(mst_resultado)} conexiones.")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🌲 Mostrar MST"):
+                mst_resultado = calcular_mst(graph)
+                st.session_state["mst_resultado"] = mst_resultado
+                st.success(f"MST calculado con {len(mst_resultado)} conexiones.")
+        with col2:
+            if st.button("❌ Ocultar MST"):
+                st.session_state["mst_resultado"] = None
+                mst_resultado = None
 
-        # Mostrar mapa con ruta y MST
-        mapa = generar_mapa(nodos, aristas, ruta=ruta, mst=mst_resultado)
+        # Mostrar mapa final con ruta y/o MST persistente
+        mapa = generar_mapa(
+            st.session_state["nodos"],
+            st.session_state["aristas"],
+            ruta=st.session_state.get("ruta"),
+            mst=st.session_state.get("mst_resultado")
+        )
         if mapa:
             folium_static(mapa)
         else:
             st.error("No se pudo generar el mapa.")
+
     else:
         st.info("Primero inicia una simulación en la pestaña anterior.")
+                
 
 
         
