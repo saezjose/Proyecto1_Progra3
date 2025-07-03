@@ -1,3 +1,5 @@
+##python -m uvicorn api.main:app --reload
+
 from fastapi import FastAPI
 from api.controllers import client_routes, order_routes, report_routes, info_routes
 
