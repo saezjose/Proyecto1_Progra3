@@ -58,4 +58,59 @@ class Simulation:
 
         _inorder(self.routes_avl.root)
         return result
+    
+    def get_simulation_summary(self):
+        return {
+            "total_clients": len(list(self.clients.keys())),
+            "total_orders": len(list(self.orders.keys())),
+            "completed_orders": len([o for _, o in self.orders.items() if o.status == "delivered"]),
+            "pending_orders": len([o for _, o in self.orders.items() if o.status == "pending"]),
+            "cancelled_orders": len([o for _, o in self.orders.items() if o.status == "cancelled"]),
+        }
+
+    def get_most_visited_clients(self):
+        clients = [c for _, c in self.clients.items()]
+        clients.sort(key=lambda c: len(c.orders), reverse=True)
+        return [c.to_dict() for c in clients]
+
+    def get_most_visited_recharges(self):
+        counts = {}
+        for _, order in self.orders.items():
+            for node in order.path:
+                if str(node).startswith("🔋"):
+                    counts[str(node)] = counts.get(str(node), 0) + 1
+        return sorted(counts.items(), key=lambda x: x[1], reverse=True)
+
+    def get_most_visited_storages(self):
+        counts = {}
+        for _, order in self.orders.items():
+            for node in order.path:
+                if str(node).startswith("📦"):
+                    counts[str(node)] = counts.get(str(node), 0) + 1
+        return sorted(counts.items(), key=lambda x: x[1], reverse=True)
+
+    def get_client_by_id(self, client_id):
+        if self.clients.contains(client_id):
+            return self.clients.get(client_id).to_dict()
+        return None
+
+    def get_order_by_id(self, order_id):
+        if self.orders.contains(order_id):
+            return self.orders.get(order_id).to_dict()
+        return None
+
+    def cancel_order(self, order_id):
+        if self.orders.contains(order_id):
+            order = self.orders.get(order_id)
+            order.status = "cancelled"
+            return {"status": "cancelled"}
+        return {"error": "order not found"}
+
+    def complete_order(self, order_id):
+        if self.orders.contains(order_id):
+            order = self.orders.get(order_id)
+            order.status = "delivered"
+            return {"status": "delivered"}
+        return {"error": "order not found"}
+
 
