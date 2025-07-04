@@ -163,14 +163,18 @@ with tabs[0]:
             return None, None
 
         vertices = list(graph.vertices())
+        
+        storage_nodes = [v for v in graph.vertices() if str(v).startswith("📦")]
         client_nodes = [v for v in graph.vertices() if str(v).startswith("👤")]
-        if len(client_nodes) >= 2:
+
+        if len(storage_nodes) >= 1 and len(client_nodes) >= 1:
             for i in range(n_orders):
-                origin = random.choice(client_nodes)
-                destination = random.choice([v for v in client_nodes if v != origin])
+                origin = random.choice(storage_nodes)
+                destination = random.choice(client_nodes)
                 path, cost = bfs(graph, origin, destination)
                 if path:
                     sim.create_order(f"C{i:03}", origin, destination, priority=1, path=path, cost=cost)
+
 
         st.session_state["graph"] = graph
         st.session_state["sim"] = sim
