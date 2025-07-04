@@ -293,8 +293,23 @@ with tabs[2]:
     if st.session_state.get("simulation_started"):
         sim = st.session_state["sim"]
 
+        # Botón para recargar manualmente
+        st.subheader("🔄 Refrescar datos desde la simulación")
+        if st.button("🔁 Refresh Orders & Clients"):
+            st.session_state["force_refresh"] = True
+            st.success("Datos actualizados desde la API 🚀")
+
+        # Obtener datos (con o sin refresh)
+        if st.session_state.get("force_refresh", False):
+            clients = sim.get_clients()
+            orders = sim.get_orders()
+            st.session_state["force_refresh"] = False  # Resetear
+        else:
+            clients = sim.get_clients()
+            orders = sim.get_orders()
+
+        # Sección de Clientes
         st.subheader("👤 Clients")
-        clients = sim.get_clients()
         if clients:
             for client in clients:
                 if "type" not in client:
@@ -303,10 +318,9 @@ with tabs[2]:
         else:
             st.info("No hay clientes registrados todavía.")
 
+        # Sección de Órdenes
         st.subheader("📦 Orders")
-        orders = sim.get_orders()
         if orders:
-            # Ajustar visualización del campo delivered_at
             for order in orders:
                 if order["delivered_at"] in [None, "null", "", "None"]:
                     order["delivered_at"] = "Aún no se completó el envío"
@@ -315,6 +329,7 @@ with tabs[2]:
             st.info("No hay órdenes registradas todavía.")
     else:
         st.info("Inicia una simulación para ver clientes y órdenes.")
+
 
 
 # =============================
