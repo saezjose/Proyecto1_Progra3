@@ -1,4 +1,5 @@
 # Para Inciarl Streamlit usa python -m streamlit run visual/dashboard.py
+#Para iniciar la API: python -m uvicorn api.main:app --reload
 
 #HAY UNOS WARNINGS DE MATPLOTLIB ES QUE CUANODO SE GENERAN LOS NODOS SE CREAN CON UNOS EMOJIS QUE NO SON CAPACES DE PROCESAR HAY
 #QUE QUITARLOS ESO Xd
@@ -18,9 +19,20 @@ from visual.map.map_builder import generar_mapa
 
 import networkx as nx 
 from visual.report_generator import generar_pdf
+import requests
 
+st.header("Verificación de conexión con API")
+# Configuración de la interfaz
 
-
+try:
+    r = requests.get("http://localhost:8000/")
+    if r.status_code == 200:
+        st.success("API está funcionando correctamente 🚀")
+        st.json(r.json())
+    else:
+        st.error(f"API respondió con código: {r.status_code}")
+except Exception as e:
+    st.error(f"No se pudo conectar con la API: {e}")
 
 
 def calcular_mst(graph):
@@ -90,10 +102,6 @@ def calcular_ruta_optima(graph, origen, destino, algoritmo="Dijkstra", max_auton
     # No se encontró ruta válida
     return None, None
 
-
-
-# Configuración de la interfaz
-st.set_page_config(page_title="Sistema de Drones", layout="wide")
 
 if "mostrar_mst" not in st.session_state:
     st.session_state["mostrar_mst"] = False
@@ -262,9 +270,6 @@ with tabs[1]:
     else:
         st.info("Primero inicia una simulación en la pestaña anterior.")
                 
-
-
-        
 
 # ==========================
 # 🌐 PESTAÑA 3: Clients & Orders
