@@ -16,6 +16,7 @@ import plotly.express as px
 import math
 from streamlit_folium import folium_static
 from visual.map.map_builder import generar_mapa  
+from datetime import datetime
 
 import networkx as nx 
 from visual.report_generator import generar_pdf
@@ -233,6 +234,13 @@ with tabs[1]:
                 st.session_state["ruta_costo"] = cost
                 ruta = path
                 st.success(f"Ruta con {algoritmo}: {' → '.join(ruta)} | Costo total: {cost}")
+
+                # 🟢 MARCAR COMO ENTREGADA LA ORDEN SI EXISTE
+                for _, order in sim.orders.items():
+                    if order.origin == origen and order.destination == destino and order.status == "pending":
+                        order.complete_delivery(cost)
+                        break
+
 
                 recarga_en_ruta = any("🔋" in n for n in ruta)
                 tiempo_estimado = round(cost * 1.2, 2)
