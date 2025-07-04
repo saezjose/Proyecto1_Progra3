@@ -220,7 +220,7 @@ with tabs[1]:
         origen = st.selectbox("📦 Nodo de Origen (Almacenamiento)", origenes, format_func=str)
         destino = st.selectbox("👤 Nodo de Destino (Cliente)", destinos, format_func=str)
 
-        algoritmo = st.radio("⚙️ Algoritmo de Ruta", ["Dijkstra", "Floyd-Warshall"])
+        algoritmo = st.radio("⚙️ Algoritmo de Ruta", ["Dijkstra"])
 
         if st.button("✈ Calcular Ruta"):
             path, cost = calcular_ruta_optima(graph, origen, destino, algoritmo)
